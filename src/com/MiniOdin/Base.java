@@ -22,7 +22,7 @@ import java.io.FileOutputStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-// Écran de base : 2 pages (flash + journal / options) avec flèches sur les côtés
+// Base screen: 2 sliding pages (flash + log / options)
 public class Base extends Activity {
     TextView log, left, right;
     ProgressBar bar;
@@ -47,7 +47,7 @@ public class Base extends Activity {
     }
 
     public void onCreate(Bundle s) {
-        Ui.prep(this); // langue + theme, avant super.onCreate
+        Ui.prep(this); // language + theme, before super.onCreate
         super.onCreate(s);
         String c = getSharedPreferences("p", 0).getString("crash", null);
         if (c != null) {
@@ -67,7 +67,7 @@ public class Base extends Activity {
     int cur = 0;
     GestureDetector gd;
 
-    // Page 0 = zone de flash + journal, page 1 = options. Le passage de l'une a l'autre coulisse.
+    // Page 0 = flash + log, page 1 = options
     void setPager(LinearLayout flash) {
         flash.setPadding(96, 24, 96, 24);
         ScrollView s0 = new ScrollView(this);
@@ -84,7 +84,7 @@ public class Base extends Activity {
         pages[1].setTranslationX(getResources().getDisplayMetrics().widthPixels);
         left.setAlpha(0f);
         left.setEnabled(false);
-        // Un glissement du doigt change aussi de page
+        // swipe to change page
         gd = new GestureDetector(this, new GestureDetector.SimpleOnGestureListener() {
             public boolean onFling(MotionEvent a, MotionEvent b, float vx, float vy) {
                 if (a == null || b == null) return false;
@@ -112,7 +112,7 @@ public class Base extends Activity {
         return a;
     }
 
-    // Fait coulisser vers la page p (0 ou 1)
+    // Slide to page p (0 or 1)
     void go(int p) {
         if (p == cur || pages[0] == null) return;
         cur = p;
@@ -141,7 +141,7 @@ public class Base extends Activity {
             c.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
                 public void onCheckedChanged(final CompoundButton v, boolean on) {
                     if (!on) { Opts.set(Base.this, Opts.K[idx], false); return; }
-                    // Avertissement à chaque activation
+                    // warn on every activation
                     new AlertDialog.Builder(Base.this).setTitle(Lang.t("warn").replace("USERDATA", "").trim())
                         .setMessage(Lang.t("w_" + Opts.K[idx]))
                         .setCancelable(false)
@@ -155,7 +155,7 @@ public class Base extends Activity {
             });
             l.addView(c);
         }
-        // Thème clair / sombre (pas d'avertissement nécessaire)
+        // light/dark theme (no warning needed)
         CheckBox th = new CheckBox(this);
         th.setText(Lang.t("themeL"));
         th.setChecked(light());
@@ -184,7 +184,7 @@ public class Base extends Activity {
         return true;
     }
 
-    // Si l'écran plante pendant sa construction : on affiche l'erreur (texte sélectionnable) au lieu de fermer l'app
+    // On build failure, show the error instead of closing
     void showCrash(Throwable t) {
         StringWriter w = new StringWriter();
         t.printStackTrace(new PrintWriter(w));
@@ -198,7 +198,7 @@ public class Base extends Activity {
         setContentView(sv);
     }
 
-    // Écrit le journal dans un vrai fichier (.log ou .txt) et le partage
+    // Write the log to a real file (.log/.txt) and share it
     void shareLog(String ext) {
         try {
             File[] old = getCacheDir().listFiles();
@@ -219,7 +219,7 @@ public class Base extends Activity {
         }
     }
 
-    // Confirmation avant action risquée : effacement des données et/ou repartitionnement
+    // Confirm before risky actions
     void guard(boolean wipe, final Runnable go) {
         String msg = (wipe ? Lang.t("wipe") + "\n\n" : "") + (Opts.on(this, "repart") ? Lang.t("repart") : "");
         if (msg.length() == 0) { go.run(); return; }

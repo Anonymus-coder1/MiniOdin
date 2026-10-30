@@ -10,7 +10,7 @@ import android.provider.OpenableColumns;
 import java.io.File;
 import java.io.FileNotFoundException;
 
-// Permet de partager le journal comme vrai fichier (.log / .txt) : seuls les fichiers "minodin-*" du cache sont exposés
+// Shares the log as a real file: only "minodin-*" cache files are exposed
 public class LogProvider extends ContentProvider {
     public boolean onCreate() { return true; }
 

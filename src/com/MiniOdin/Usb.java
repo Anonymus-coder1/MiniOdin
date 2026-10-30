@@ -11,19 +11,19 @@ import android.hardware.usb.UsbInterface;
 import android.hardware.usb.UsbManager;
 import android.os.Build;
 
-// Détection de l'état du téléphone branché en OTG + demande de permission USB
+// Phone state detection over OTG + USB permission
 public class Usb {
     public static final int NONE = 0, OTHER = 1, NORMAL = 2, ADB = 3, DOWNLOAD = 4;
     static final String ACT = "com.MiniOdin.USB";
-    static UsbDevice best;            // appareil retenu par le dernier appel à state()
-    static BroadcastReceiver pend;    // attente de la réponse à la demande de permission
+    static UsbDevice best;            // device chosen by the last state() call
+    static BroadcastReceiver pend;    // waiting for the permission answer
 
-    // Samsung en Download Mode (Odin)
+    // Samsung in Download Mode (Odin)
     static boolean isDl(UsbDevice d) {
         return d.getVendorId() == 0x04E8 && (d.getProductId() == 0x685D || d.getProductId() == 0x6601);
     }
 
-    // Interface ADB : classe 0xFF, sous-classe 0x42, protocole 1
+    // ADB interface: class 0xFF, subclass 0x42, protocol 1
     static boolean hasAdb(UsbDevice d) {
         for (int i = 0; i < d.getInterfaceCount(); i++) {
             UsbInterface it = d.getInterface(i);
@@ -32,7 +32,7 @@ public class Usb {
         return false;
     }
 
-    // Renvoie l'état le plus "avancé" parmi les appareils branchés ; l'appareil correspondant est dans Usb.best
+    // Most advanced state among plugged devices; device is in Usb.best
     static int state(UsbManager um) {
         int st = NONE;
         best = null;
@@ -47,7 +47,7 @@ public class Usb {
         return st;
     }
 
-    // Exécute ok quand la permission est accordée (tout de suite si elle l'est déjà), sinon no
+    // Run ok once permission is granted (now if already), else no
     static void withPerm(final Activity a, final UsbDevice d, final Runnable ok, final Runnable no) {
         final UsbManager um = (UsbManager) a.getSystemService(Context.USB_SERVICE);
         if (um.hasPermission(d)) { ok.run(); return; }

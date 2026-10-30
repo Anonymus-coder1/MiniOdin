@@ -2,8 +2,8 @@ package com.MiniOdin;
 
 import java.io.InputStream;
 
-// Décompression LZ4 (format "frame" des .lz4 Samsung) avec la lib lz4-java.
-// Chargée par réflexion : l'app compile et tourne même si le .jar n'est pas encore là.
+// LZ4 frame decompression (Samsung .lz4) with lz4-java.
+// Loaded by reflection: the app builds even without the .jar.
 public class Lz4x {
     public static boolean available() {
         try { Class.forName("net.jpountz.lz4.LZ4FrameInputStream"); return true; } catch (Throwable t) { return false; }

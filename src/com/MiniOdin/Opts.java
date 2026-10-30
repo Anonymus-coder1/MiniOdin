@@ -2,7 +2,7 @@ package com.MiniOdin;
 
 import android.content.Context;
 
-// Options de flash, mémorisées dans les préférences
+// Flash options, stored in preferences
 public class Opts {
     static final String[] K = {"reboot", "slotb", "nomd5", "erase", "repart", "tflash"};
     static final String[][] L = {

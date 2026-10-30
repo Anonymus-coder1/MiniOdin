@@ -5,9 +5,9 @@ import android.content.Context;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 
-// Garde la trace du dernier crash pour l'afficher dans le journal au prochain lancement
+// Keeps the last crash to show it in the log on next launch
 public class App extends Application {
-    static Context ctx; // contexte global (utilisé par les threads de flash)
+    static Context ctx; // global context for flash threads
 
     public void onCreate() {
         super.onCreate();

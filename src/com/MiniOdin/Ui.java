@@ -6,11 +6,11 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
 
-// Petits outils communs aux écrans : thème clair/sombre, tailles, boutons
+// Small shared helpers: theme, sizes, buttons
 public class Ui {
     static boolean light(Context c) { return c.getSharedPreferences("p", 0).getBoolean("light", false); }
 
-    // A appeler au tout début de onCreate, avant super.onCreate
+    // Call first in onCreate, before super.onCreate
     static void prep(Activity a) {
         Lang.load(a);
         a.setTheme(light(a) ? android.R.style.Theme_DeviceDefault_Light : android.R.style.Theme_DeviceDefault);
@@ -27,7 +27,7 @@ public class Ui {
         return b;
     }
 
-    // Ligne horizontale où chaque vue prend la même largeur
+    // Horizontal row, equal widths
     static LinearLayout row(Context c, View... views) {
         LinearLayout r = new LinearLayout(c);
         r.setOrientation(LinearLayout.HORIZONTAL);

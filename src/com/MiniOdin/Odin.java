@@ -14,45 +14,45 @@ import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.List;
 
-// Protocole Odin (USB bulk) : connexion, handshake, lecture automatique de la PIT, session d'ecriture
+// Odin USB bulk protocol: connect, handshake, auto PIT, write session
 public class Odin {
-    // Un fichier a ecrire : on le retrouve dans la PIT par nom de fichier ou par nom de partition
+    // A file to write, matched in the PIT by file or partition name
     public static class Job {
-        public String label;   // nom affiche
-        public File file;      // fichier decompresse dans le cache
-        public String key;     // nom a chercher dans la PIT
-        public boolean byFile; // true = nom de fichier flash, false = nom de partition
+        public String label;   // display name
+        public File file;      // file in cache
+        public String key;     // name to look up in the PIT
+        public boolean byFile; // true = flash file name, false = partition name
         public Job(String label, File file, String key, boolean byFile) {
             this.label = label; this.file = file; this.key = key; this.byFile = byFile;
         }
     }
 
-    // Prepare les fichiers (MD5, extraction) et renvoie la liste a ecrire, ou null pour abandonner
+    // Prepares files (MD5, extract); returns the jobs, or null to abort
     public interface Step { List<Job> run(); }
     public interface Cb { void say(String m); void progress(int p); }
 
     static UsbDeviceConnection conn;
     static UsbEndpoint in, out;
-    static Cb log;                 // dernier journal utilise (messages de bas niveau)
-    static int ctlIf = 0;          // interface CDC "controle" (DTR/RTS)
+    static Cb log;                 // last log (low-level messages)
+    static int ctlIf = 0;          // CDC control interface (DTR/RTS)
     static final String BUILD = "r19";
     static String path;
     static Activity act;
-    static int gen;                // identifiant de la tentative de connexion en cours
-    static byte[] pitData;         // PIT lue pendant cette connexion
-    static boolean loke;           // handshake deja fait sur cette connexion
-    static boolean sess;           // session Odin deja ouverte (0x64/0 envoye)
-    static boolean busy;           // une operation USB est en cours
+    static int gen;                // current connection attempt id
+    static byte[] pitData;         // PIT read on this connection
+    static boolean loke;           // handshake already done
+    static boolean sess;           // session already open
+    static boolean busy;           // USB operation in progress
     static final Object LOCK = new Object();
-    static StringBuilder J = new StringBuilder(); // journal partage entre les ecrans
+    static StringBuilder J = new StringBuilder(); // log shared between screens
 
-    static final int PART = 131072;      // taille d'un morceau envoye
-    static final int PER_SEQ = 240;      // morceaux par sequence
-    static final int CHUNK = 16384;      // taille maximale d'un bulkTransfer
+    static final int PART = 131072;      // bytes per part
+    static final int PER_SEQ = 240;      // parts per sequence
+    static final int CHUNK = 16384;      // max bulkTransfer size
 
     public static final String[] SLOTS = {"BL", "AP", "CP", "CSC", "USERDATA"};
     static final String[][] MAP = {
-        // Les noms les plus precis d'abord (init_boot ne doit JAMAIS etre pris pour boot)
+        // Most specific names first (init_boot must never match boot)
         {"init_boot", "INIT_BOOT"}, {"vendor_boot", "VENDOR_BOOT"}, {"system_ext", "SYSTEM_EXT"}, {"super", "SUPER"},
         {"userdata", "USERDATA"}, {"recovery", "RECOVERY"}, {"vbmeta", "VBMETA"},
         {"dtbo", "DTBO"}, {"vendor", "VENDOR"}, {"product", "PRODUCT"},
@@ -61,7 +61,7 @@ public class Odin {
         {"boot", "BOOT"}
     };
 
-    // Partitions qu'on refuse d'ecrire : identite du telephone (IMEI...), chargeur de demarrage MTK, table de partitions
+    // Never written: phone identity (IMEI...), MTK preloader, partition table
     static final String[] PROTECTED = {"preloader", "pgpt", "sgpt", "pit", "proinfo", "nvram", "nvdata", "nvcfg",
         "protect1", "protect2", "persist", "efuse", "seccfg", "frp"};
 
@@ -103,7 +103,7 @@ public class Odin {
         UsbDevice d = null;
         for (UsbDevice x : um.getDeviceList().values()) {
             if (x.getVendorId() != 0x04E8) continue;
-            if (d == null || isDl(x)) d = x; // prefere l'appareil en Download Mode
+            if (d == null || isDl(x)) d = x; // prefer the Download Mode device
         }
         if (d == null) { cb.say(Lang.t("nousb")); return; }
         path = d.getDeviceName();
@@ -145,7 +145,7 @@ public class Odin {
         }
         if (out == null) c.close();
         if (out == null && n < 8) {
-            // Le telephone finit parfois de s'enumerer : on reessaie toutes les 1,5 s
+            // the phone may still be enumerating: retry every 1.5 s
             cb.say(Lang.t("wait") + " (" + (n + 1) + "/8)");
             final int g = gen;
             new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
@@ -158,7 +158,7 @@ public class Odin {
         autoPit(cb);
     }
 
-    // Detaille toutes les interfaces d'un appareil USB
+    // Describe all interfaces of a USB device
     static void describe(UsbDevice d, Cb cb) {
         cb.say(Lang.x("   interfaces vues : ", "   interfaces seen: ") + d.getInterfaceCount());
         for (int i = 0; i < d.getInterfaceCount(); i++) {
@@ -172,7 +172,7 @@ public class Odin {
         }
     }
 
-    // Liste tout ce que le telephone voit sur l'USB (utile pour diagnostiquer)
+    // List everything seen on USB (for diagnostics)
     public static void usbInfo(Activity a, Cb cb) {
         log = cb;
         UsbManager um = (UsbManager) a.getSystemService(Context.USB_SERVICE);
@@ -195,15 +195,15 @@ public class Odin {
         }
     }
 
-    // Handshake Odin : on envoie "ODIN", le telephone doit repondre "LOKE"
+    // Handshake: send "ODIN", expect "LOKE"
     public static String handshake() {
         if (conn == null) return null;
-        // Apres un "LOKE", rejouer "ODIN" ne repond plus
+        // after "LOKE", replaying "ODIN" gets no answer
         if (loke) return "LOKE";
         byte[] junk = new byte[64];
-        int j = conn.bulkTransfer(in, junk, junk.length, 200); // vide d'eventuelles donnees en attente
+        int j = conn.bulkTransfer(in, junk, junk.length, 200); // drain pending data
         if (j > 0 && log != null) log.say(Lang.x("   (donnees en attente : ", "   (pending data: ") + hex(java.util.Arrays.copyOf(junk, j)) + ")");
-        // DTR + RTS a 1, comme un port serie
+        // DTR + RTS = 1, like a serial port
         conn.controlTransfer(0x21, 0x22, 0x03, ctlIf, null, 0, 500);
         byte[] m = "ODIN".getBytes();
         for (int t = 1; t <= 3; t++) {
@@ -225,7 +225,7 @@ public class Odin {
         return null;
     }
 
-    // ---------- Paquets de controle ----------
+    // ---------- Control packets ----------
     static byte[] pkt(int type, int req, int... d) {
         ByteBuffer b = ByteBuffer.allocate(1024).order(ByteOrder.LITTLE_ENDIAN);
         b.putInt(type).putInt(req);
@@ -245,7 +245,7 @@ public class Odin {
         return s.toString().trim();
     }
 
-    // Envoie un paquet de controle, renvoie {typeReponse, valeur} ou null
+    // Send a control packet, return {responseType, value} or null
     static int[] ask(byte[] p) {
         if (conn == null || conn.bulkTransfer(out, p, p.length, 5000) < 0) return null;
         byte[] r = recv(1024);
@@ -254,7 +254,7 @@ public class Odin {
         return new int[]{b.getInt(0), b.getInt(4)};
     }
 
-    // Ouvre la session Odin si elle ne l'est pas deja
+    // Open the Odin session if not already open
     static boolean beginSession(Cb cb) {
         if (sess) return true;
         int[] r = null;
@@ -267,7 +267,7 @@ public class Odin {
         return true;
     }
 
-    // ---------- Lecture automatique de la PIT (lecture seule) ----------
+    // ---------- Auto PIT read (read-only) ----------
     public static void autoPit(final Cb cb) {
         log = cb;
         if (!connected()) return;
@@ -278,7 +278,7 @@ public class Odin {
                         if (!"LOKE".equals(handshake())) { cb.say(Lang.t("noloke")); return; }
                         if (pitData == null) {
                             if (!beginSession(cb)) return;
-                            int[] r = ask(pkt(0x65, 1)); // demande de la taille de la PIT
+                            int[] r = ask(pkt(0x65, 1)); // ask PIT size
                             if (r == null || r[0] != 0x65 || r[1] <= 0 || r[1] > 1048576) { cb.say(Lang.x("PIT illisible", "PIT unreadable")); return; }
                             int size = r[1], n = (size + 499) / 500;
                             byte[] pit = new byte[n * 500];
@@ -290,8 +290,8 @@ public class Odin {
                                 System.arraycopy(d, 0, pit, i * 500, Math.min(500, d.length));
                                 cb.progress((i + 1) * 100 / n);
                             }
-                            ask(pkt(0x65, 3)); // fin du transfert PIT
-                            // La session reste OUVERTE : la fermer ici faisait repondre une erreur au telephone
+                            ask(pkt(0x65, 3)); // end of PIT transfer
+                            // keep the session OPEN: closing it here made the phone answer an error
                             pitData = pit;
                         }
                         ByteBuffer b = ByteBuffer.wrap(pitData).order(ByteOrder.LITTLE_ENDIAN);
@@ -310,7 +310,7 @@ public class Odin {
         return new String(p, o, e - o);
     }
 
-    // {id, type} d'une partition de la PIT, ou null
+    // {id, type} of a PIT partition, or null
     public static int[] pitFind(String name, boolean byFile) {
         if (pitData == null) return null;
         ByteBuffer b = ByteBuffer.wrap(pitData).order(ByteOrder.LITTLE_ENDIAN);
@@ -346,7 +346,7 @@ public class Odin {
         return false;
     }
 
-    // ---------- Session d'ecriture ----------
+    // ---------- Write session ----------
     public static void start(final String what, final Cb cb, final Step next) {
         log = cb;
         if (!connected()) { cb.say(Lang.t("conn1")); return; }
@@ -384,7 +384,7 @@ public class Odin {
         return true;
     }
 
-    // Reponse apres un morceau : le premier entier vaut -1 en cas d'erreur
+    // Ack after a part: first int is -1 on error
     static boolean ack(Cb cb) {
         byte[] r = recv(64);
         if (r == null || r.length < 4) { cb.say(Lang.x("Pas d'accuse de reception du telephone", "No acknowledgement from the phone")); return false; }
@@ -394,7 +394,7 @@ public class Odin {
 
     static boolean flashAll(List<Job> jobs, Cb cb) throws Exception {
         Context c = App.ctx;
-        // Resolution dans la PIT + controle des partitions protegees
+        // Resolve in the PIT + protected partitions check
         List<Job> ok = new ArrayList<Job>();
         List<int[]> ids = new ArrayList<int[]>();
         long total = 0;
@@ -460,7 +460,7 @@ public class Odin {
             }
             cb.say(Lang.x("OK : ", "Done: ") + j.label);
         }
-        // Fin de session ; le redemarrage est optionnel
+        // End session; reboot is optional
         boolean reboot = Opts.on(c, "reboot");
         ask(pkt(0x67, 0));
         sess = false;

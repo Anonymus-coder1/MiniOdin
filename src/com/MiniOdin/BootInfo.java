@@ -18,8 +18,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.GZIPInputStream;
 
-// Lecture de l'en-tête, du kernel et du ramdisk d'un boot.img / init_boot.img / vendor_boot.img
-// pour deviner à quel téléphone il correspond. Aucune dépendance Android.
+// Reads header, kernel and ramdisk of a boot image to guess the phone model.
+// No Android dependency.
 public class BootInfo {
     static final Charset L1 = Charset.forName("ISO-8859-1");
     static final int CAP = 160 << 20;
@@ -73,7 +73,7 @@ public class BootInfo {
         } catch (Throwable e) {
             r.error = e.toString();
         } finally {
-            try { if (raf != null) raf.close(); } catch (IOException e) { /* ignoré */ }
+            try { if (raf != null) raf.close(); } catch (IOException e) { /* ignored */ }
         }
         return r;
     }
@@ -123,7 +123,7 @@ public class BootInfo {
         parseCmdline(r);
     }
 
-    // os_version = (A<<14 | B<<7 | C) << 11 | (annee-2000) << 4 | mois
+    // os_version = (A<<14|B<<7|C)<<11 | (year-2000)<<4 | month
     static void decodeOs(long os, Result r) {
         if (os == 0) return;
         long ver = os >> 11;
@@ -189,7 +189,7 @@ public class BootInfo {
     static final Pattern SOC = Pattern.compile("^(mt\\d+|s5e\\d+|exynos\\d+|universal\\d+|sm\\d+|msm\\d+|sdm\\d+|sc\\d+|ums\\d+|gs\\d+|qcom|mtk\\w*)$");
     static final Pattern SOCFILE = Pattern.compile("^(?:init|fstab|ueventd)\\.([a-z0-9_]+?)(?:\\.rc)?$");
 
-    // Archive cpio "newc" : 110 octets d'en-tête ASCII hexadécimal, nom, données, alignement sur 4
+    // cpio "newc": 110-byte ASCII header, name, data, 4-byte alignment
     static void cpio(byte[] d, Result r) {
         int p = 0;
         while (p + 110 <= d.length) {
@@ -248,7 +248,7 @@ public class BootInfo {
     static final Pattern CODE = Pattern.compile("([A-Z][0-9]{3}[A-Z0-9]?)");
     static final Pattern KCODE = Pattern.compile("-ab([A-Z][0-9]{3}[A-Z0-9]?)");
 
-    // Liste des modèles candidats, du plus fiable au moins fiable
+    // Candidate models, most reliable first
     static void deduce(Result r) {
         add(r, r.props.get("ro.product.model"), "ro.product.model");
         add(r, r.boot.get("androidboot.em.model"), "androidboot.em.model");
@@ -288,7 +288,7 @@ public class BootInfo {
         return s.toString();
     }
 
-    // ---------- Décompression ----------
+    // ---------- Decompression ----------
     static byte[] gunzip(byte[] src, int cap) throws IOException {
         return readAll(new GZIPInputStream(new ByteArrayInputStream(src)), cap);
     }
@@ -303,12 +303,12 @@ public class BootInfo {
                 if (o.size() >= cap) break;
             }
         } catch (IOException e) {
-            if (o.size() == 0) throw e; // on garde ce qui a pu être lu
+            if (o.size() == 0) throw e; // keep what was read
         }
         return o.toByteArray();
     }
 
-    // Format "legacy" des ramdisks lz4 Android : magic 0x184C2102, puis [taille LE][bloc] répétés
+    // Android legacy lz4 ramdisk: magic 0x184C2102, then [size LE][block]...
     static byte[] lz4Legacy(byte[] src, int cap) throws IOException {
         ByteArrayOutputStream out = new ByteArrayOutputStream(1 << 20);
         byte[] blk = new byte[8 * 1024 * 1024 + 64];
@@ -316,7 +316,7 @@ public class BootInfo {
         while (p + 4 <= src.length) {
             int csz = (src[p] & 0xFF) | ((src[p + 1] & 0xFF) << 8) | ((src[p + 2] & 0xFF) << 16) | ((src[p + 3] & 0xFF) << 24);
             p += 4;
-            if (csz == 0x184C2102) continue; // magic répété (archives concaténées)
+            if (csz == 0x184C2102) continue; // repeated magic (concatenated archives)
             if (csz <= 0 || p + csz > src.length) break;
             int n = lz4Block(src, p, csz, blk);
             out.write(blk, 0, n);
@@ -338,7 +338,7 @@ public class BootInfo {
                 System.arraycopy(s, sp, d, dp, lit);
                 sp += lit;
                 dp += lit;
-                if (sp >= sEnd) break; // dernière séquence : littéraux seulement
+                if (sp >= sEnd) break; // last sequence: literals only
                 int off = (s[sp] & 0xFF) | ((s[sp + 1] & 0xFF) << 8);
                 sp += 2;
                 int ml = token & 15;
@@ -354,7 +354,7 @@ public class BootInfo {
         return dp;
     }
 
-    // ---------- Rapport lisible ----------
+    // ---------- Report ----------
     static String size(long v) { return v >= 1048576 ? String.format("%.1f MB", v / 1048576.0) : (v >> 10) + " KB"; }
 
     static String L(boolean en, String fr, String e) { return en ? e : fr; }

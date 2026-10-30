@@ -10,7 +10,7 @@ import android.view.Gravity;
 import android.view.View;
 import android.widget.*;
 
-// Ecran de demarrage : detecte l'etat du telephone et propose de le redemarrer en Download Mode via ADB
+// Start screen: detects the phone state, offers ADB reboot to Download Mode
 public class StartActivity extends Activity {
     TextView status, note;
     Button reboot, go;
@@ -109,7 +109,7 @@ public class StartActivity extends Activity {
         running = false;
     }
 
-    // Met a jour le texte et les boutons selon ce qui est branche
+    // Update text and buttons from what is plugged in
     void refresh() {
         if (um == null) return;
         int st = Usb.state(um);
@@ -123,7 +123,7 @@ public class StartActivity extends Activity {
         if (st == Usb.DOWNLOAD && sent && !opened) { opened = true; open(); }
     }
 
-    // Envoie "reboot:download" en ADB (le telephone peut demander d'autoriser le debogage USB)
+    // Send "reboot:download" over ADB (phone may ask to allow USB debugging)
     void rebootDownload() {
         final UsbDevice d = Usb.best;
         if (d == null || last != Usb.ADB) return;

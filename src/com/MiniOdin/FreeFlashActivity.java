@@ -44,7 +44,7 @@ public class FreeFlashActivity extends Base {
         show();
         l.addView(info);
 
-        // Partition cible (AUTO = détection par le nom) + slot A/B
+        // Target partition (AUTO = detect from name) + A/B slot
         sp = new Spinner(this);
         sp.setAdapter(new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, PARTS));
         l.addView(sp);
@@ -74,7 +74,7 @@ public class FreeFlashActivity extends Base {
         info.setText(file == null ? Lang.t("none") : file + "\n-> " + (part == null ? Lang.t("unk") : part));
     }
 
-    // Partition choisie à la main, sinon détectée
+    // Chosen partition, else detected
     String target() {
         String p = PARTS[sp.getSelectedItemPosition()];
         if (p.equals("AUTO")) p = part;

@@ -28,7 +28,7 @@ public class MainActivity extends Base {
         LinearLayout l = new LinearLayout(this);
         l.setOrientation(LinearLayout.VERTICAL);
 
-        // Ligne 1 : connexion et infos USB
+        // Row 1: connect and USB info
         l.addView(Ui.row(this,
             Ui.button(this, Lang.t("connect"), new View.OnClickListener() {
                 public void onClick(View v) { Odin.connect(MainActivity.this, cb); }
@@ -37,7 +37,7 @@ public class MainActivity extends Base {
                 public void onClick(View v) { Odin.usbInfo(MainActivity.this, cb); }
             })));
 
-        // Ligne 2 : analyse du boot et flash libre
+        // Row 2: boot analysis and free flash
         l.addView(Ui.row(this,
             Ui.button(this, Lang.t("analyze"), new View.OnClickListener() {
                 public void onClick(View v) {
@@ -50,7 +50,7 @@ public class MainActivity extends Base {
                 public void onClick(View v) { startActivity(new Intent(MainActivity.this, FreeFlashActivity.class)); }
             })));
 
-        // Les 5 emplacements de fichiers
+        // The 5 file slots
         for (int i = 0; i < 5; i++) {
             final int idx = i;
             btn[i] = Ui.button(this, Odin.SLOTS[i] + " : " + (names[i] == null ? Lang.t("empty") : names[i]), new View.OnClickListener() {
@@ -66,7 +66,7 @@ public class MainActivity extends Base {
             l.addView(btn[i]);
         }
 
-        // START puis retrait des fichiers
+        // START, then remove files
         l.addView(Ui.button(this, Lang.t("start"), new View.OnClickListener() {
             public void onClick(View v) { askStart(); }
         }));
@@ -77,7 +77,7 @@ public class MainActivity extends Base {
         addTail(l);
         setPager(l);
         if (Odin.J.length() == 0) cb.say("Mini Odin build " + Odin.BUILD);
-        // Si le telephone est deja en Download Mode, on se connecte tout seul (la PIT est lue automatiquement)
+        // Already in Download Mode: auto-connect (PIT is read automatically)
         if (!Odin.connected() && Usb.state((android.hardware.usb.UsbManager) getSystemService(USB_SERVICE)) == Usb.DOWNLOAD)
             Odin.connect(this, cb);
     }
@@ -143,7 +143,7 @@ public class MainActivity extends Base {
         }
     }
 
-    // ---------- Analyse du header / kernel / ramdisk ----------
+    // ---------- Boot analysis ----------
     void analyze(final Uri u, final String n) {
         cb.say(Lang.t("b_busy") + " " + n);
         new Thread(new Runnable() {
@@ -174,7 +174,7 @@ public class MainActivity extends Base {
         box.setOrientation(LinearLayout.VERTICAL);
         box.setPadding(Ui.dp(this, 16), Ui.dp(this, 8), Ui.dp(this, 16), 0);
 
-        // Petite fenetre avec l'image du telephone, au-dessus du resultat
+        // Small phone picture window above the result
         final ImageView img = new ImageView(this);
         img.setScaleType(ImageView.ScaleType.FIT_CENTER);
         img.setBackgroundColor(0x22888888);
@@ -221,7 +221,7 @@ public class MainActivity extends Base {
         d.show();
     }
 
-    // Cle API et identifiant de moteur pour la recherche Google Images (facultatif)
+    // Optional Google Images API key and engine id
     void keyDialog() {
         LinearLayout b = new LinearLayout(this);
         b.setOrientation(LinearLayout.VERTICAL);

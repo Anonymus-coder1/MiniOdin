@@ -8,9 +8,9 @@ import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.List;
 
-// Lecture légère d'un firmware Samsung (.tar / .tar.md5) sans lib externe
+// Light Samsung firmware reader (.tar / .tar.md5), no external lib
 public class Fw {
-    // Déduit type / CSC / version depuis le NOM du fichier (ex: CSC_OMC_OXM_A546B...tar.md5)
+    // Type / CSC / version from the file NAME
     public static String info(String f) {
         String[] t = f.split("_");
         String type = t[0].equals("HOME") ? "HOME_CSC" : t[0];
@@ -24,7 +24,7 @@ public class Fw {
     }
 
 
-    // Taille d'une entrée tar : octal, ou base-256 pour les très gros fichiers
+    // Tar entry size: octal, or base-256 for huge files
     static long size(byte[] h) {
         if ((h[124] & 0x80) != 0) {
             long v = h[124] & 0x7F;
@@ -34,7 +34,7 @@ public class Fw {
         try { return Long.parseLong(new String(h, 124, 12).trim(), 8); } catch (Exception e) { return 0; }
     }
 
-    // Lit exactement n octets d'un flux (pour décompresser une entrée du tar)
+    // Reads exactly n bytes of a stream
     static class Lim extends InputStream {
         DataInputStream d;
         long left;
@@ -58,7 +58,7 @@ public class Fw {
         }
     }
 
-    // Vérifie le MD5 ajouté en fin de .tar.md5 ("<md5>  <nom>")
+    // Checks the MD5 appended to .tar.md5
     static boolean md5check(Context c, Uri u, Odin.Cb cb) throws Exception {
         ParcelFileDescriptor p = c.getContentResolver().openFileDescriptor(u, "r");
         try {
@@ -73,7 +73,7 @@ public class Fw {
             for (String s : ts.split("\n")) if (s.trim().length() > 0) last = s.trim();
             String want = last.length() >= 32 ? last.substring(0, 32).toLowerCase() : "";
             if (!want.matches("[0-9a-f]{32}")) { cb.say(Lang.x("Aucun MD5 trouvé en fin de fichier", "No MD5 found at the end of the file")); return true; }
-            long len = tot - tail + ts.lastIndexOf(last); // les données s'arrêtent avant la ligne MD5
+            long len = tot - tail + ts.lastIndexOf(last); // data ends before the MD5 line
             cb.say(Lang.x("Vérification MD5 (", "Checking MD5 (") + (len >> 20) + " MB)...");
             fi.getChannel().position(0);
             MessageDigest md = MessageDigest.getInstance("MD5");
@@ -96,7 +96,7 @@ public class Fw {
         }
     }
 
-    // Prépare un firmware : MD5, extraction dans le cache (décompression .lz4), lien avec les ID de la PIT
+    // MD5, extract to cache (.lz4 decompressed), match PIT ids
     public static List<Odin.Job> prepare(Context c, Uri u, String name, Odin.Cb cb) {
         List<Odin.Job> jobs = new ArrayList<Odin.Job>();
         try {
@@ -155,7 +155,7 @@ public class Fw {
         }
     }
 
-    // Copie un fichier choisi dans le cache (pour pouvoir le relire pendant l'écriture)
+    // Copy a picked file to cache so it can be re-read while flashing
     public static File copy(Context c, Uri u, String name, Odin.Cb cb) throws Exception {
         File f = new File(c.getCacheDir(), "job_" + name.replace('/', '_'));
         InputStream in = c.getContentResolver().openInputStream(u);
@@ -168,7 +168,7 @@ public class Fw {
         return f;
     }
 
-    // Pour l'analyse : récupère les images boot d'un fichier (.img direct, .lz4, ou boot/init_boot/vendor_boot dans un .tar)
+    // Get boot images from a file (.img, .lz4 or a .tar)
     public static List<File> bootFiles(Context c, Uri u, String name) throws Exception {
         List<File> r = new ArrayList<File>();
         String low = name.toLowerCase();
@@ -216,7 +216,7 @@ public class Fw {
         return r;
     }
 
-    // Liste le contenu du tar en lisant seulement les en-têtes de 512 octets
+    // List tar contents by reading 512-byte headers only
     public static void scan(final Context c, final Uri u, final Odin.Cb cb) {
         new Thread(new Runnable() {
             public void run() {

@@ -13,7 +13,7 @@ import java.net.URLEncoder;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-// Cherche une photo du téléphone : Google (API Programmable Search, avec ta clé) sinon Wikipédia
+// Phone picture: Google (Programmable Search, your key) else Wikipedia
 public class PhoneImg {
     public interface Done { void got(Bitmap b, String source); }
 
@@ -77,10 +77,10 @@ public class PhoneImg {
                         JSONObject j = new JSONObject(get(u));
                         JSONArray it = j.optJSONArray("items");
                         for (int i = 0; it != null && i < it.length() && bm == null; i++) {
-                            try { bm = bitmap(it.getJSONObject(i).getString("link")); src = "Google"; } catch (Exception e) { /* image suivante */ }
+                            try { bm = bitmap(it.getJSONObject(i).getString("link")); src = "Google"; } catch (Exception e) { /* next image */ }
                         }
                     }
-                } catch (Exception e) { /* repli sur Wikipédia */ }
+                } catch (Exception e) { /* fall back to Wikipedia */ }
                 if (bm == null) {
                     try {
                         String u = "https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrlimit=1&prop=pageimages"
@@ -90,7 +90,7 @@ public class PhoneImg {
                         String t = pages.getJSONObject(k).getJSONObject("thumbnail").getString("source");
                         bm = bitmap(t);
                         src = "Wikipedia";
-                    } catch (Exception e) { /* pas d'image */ }
+                    } catch (Exception e) { /* no image */ }
                 }
                 final Bitmap fb = bm;
                 final String fs = src;

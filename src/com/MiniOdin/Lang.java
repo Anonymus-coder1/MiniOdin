@@ -70,7 +70,7 @@ public class Lang {
         {"flash", "FLASH", "FLASH"}
     };
 
-    // Texte choisi selon la langue (pour les messages du journal)
+    // Text by language (for log messages)
     public static String x(String fr, String enText) { return en ? enText : fr; }
 
     public static String t(String k) {

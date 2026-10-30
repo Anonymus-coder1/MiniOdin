@@ -21,7 +21,7 @@ import java.security.interfaces.RSAPublicKey;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 
-// Petit client ADB par USB (le téléphone qui fait tourner l'app est l'hôte) : sert à envoyer "reboot:download"
+// Minimal USB ADB client, used to send "reboot:download"
 public class Adb {
     static final int CNXN = 0x4e584e43, AUTH = 0x48545541, OPEN = 0x4e45504f, OKAY = 0x59414b4f, CLSE = 0x45534c43;
 
@@ -31,7 +31,7 @@ public class Adb {
 
     static class Msg { int cmd, a0, a1; byte[] data; }
 
-    // Clé de l'app, créée une fois puis gardée (l'option "toujours autoriser" du téléphone cible la retient)
+    // App RSA key, created once and kept
     static synchronized KeyPair key(Context ctx) throws GeneralSecurityException {
         SharedPreferences p = ctx.getSharedPreferences("adb", 0);
         String pv = p.getString("priv", null), pb = p.getString("pub", null);
@@ -41,7 +41,7 @@ public class Adb {
                 PrivateKey a = kf.generatePrivate(new PKCS8EncodedKeySpec(Base64.decode(pv, Base64.NO_WRAP)));
                 PublicKey b = kf.generatePublic(new X509EncodedKeySpec(Base64.decode(pb, Base64.NO_WRAP)));
                 return new KeyPair(b, a);
-            } catch (Exception e) { /* clé illisible : on en refait une */ }
+            } catch (Exception e) { /* unreadable key: make a new one */ }
         }
         KeyPairGenerator g = KeyPairGenerator.getInstance("RSA");
         g.initialize(2048);
@@ -51,7 +51,7 @@ public class Adb {
         return kp;
     }
 
-    // Ouvre l'interface ADB de l'appareil et lance le service demandé (ex : "reboot:download")
+    // Open the ADB interface and start a service (e.g. "reboot:download")
     public static boolean reboot(UsbManager um, UsbDevice d, String service, Context ctx, Odin.Cb cb) {
         UsbInterface itf = null;
         UsbEndpoint ei = null, eo = null;
@@ -96,7 +96,7 @@ public class Adb {
             Msg m = recv(3000);
             if (m == null) {
                 silent++;
-                if (silent == 2) send(CNXN, 0x01000000, 4096, hello); // le téléphone n'a peut-être pas vu le premier
+                if (silent == 2) send(CNXN, 0x01000000, 4096, hello); // resend in case the first one was missed
                 continue;
             }
             if (m.cmd == CNXN) {
@@ -112,7 +112,7 @@ public class Adb {
                     sentKey = true;
                     cb.say(Lang.x("Autorise le débogage USB sur le téléphone cible (coche \"Toujours autoriser\")", "Allow USB debugging on the target phone (tick \"Always allow\")"));
                 }
-                // clé déjà envoyée : on attend la réponse de l'utilisateur sur le téléphone cible
+                // key already sent: wait for the user to accept on the target phone
             }
         }
         if (!connected) {
@@ -127,12 +127,12 @@ public class Adb {
             if (m.cmd == OKAY) return true;
             if (m.cmd == CLSE) { cb.say(Lang.x("Commande refusée par le téléphone", "Command refused by the phone")); return false; }
         }
-        // pas de réponse : le téléphone a sans doute déjà redémarré
+        // no answer: the phone is probably already rebooting
         cb.say(Lang.x("Pas de confirmation reçue (le téléphone redémarre peut-être déjà)", "No confirmation received (the phone may already be rebooting)"));
         return true;
     }
 
-    // En-tête de 24 octets : commande, arg0, arg1, taille, somme des octets, commande inversée
+    // 24-byte header: cmd, arg0, arg1, length, checksum, ~cmd
     boolean send(int cmd, int a0, int a1, byte[] data) {
         ByteBuffer b = ByteBuffer.allocate(24).order(ByteOrder.LITTLE_ENDIAN);
         int sum = 0;

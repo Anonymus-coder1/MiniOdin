@@ -8,12 +8,12 @@ import java.security.PrivateKey;
 import java.security.Signature;
 import java.security.interfaces.RSAPublicKey;
 
-// Clé RSA au format ADB ("androidpubkey") et signature du jeton d'authentification. Aucune dépendance Android.
+// ADB public key format and auth token signing. No Android dependency.
 public class AdbKey {
-    // Préfixe DER d'un condensat SHA-1 : le jeton ADB (20 octets) est déjà un condensat
+    // DER prefix of a SHA-1 digest (the 20-byte ADB token)
     static final byte[] SHA1_PREFIX = {0x30, 0x21, 0x30, 0x09, 0x06, 0x05, 0x2b, 0x0e, 0x03, 0x02, 0x1a, 0x05, 0x00, 0x04, 0x14};
 
-    // Entier -> tableau little-endian de longueur fixe
+    // BigInteger -> fixed-length little-endian bytes
     static byte[] le(BigInteger v, int len) {
         byte[] be = v.toByteArray();
         byte[] out = new byte[len];
@@ -24,7 +24,7 @@ public class AdbKey {
         return out;
     }
 
-    // struct { u32 nbMots; u32 n0inv; u8 modulus[]; u8 rr[]; u32 exposant; } en little-endian
+    // androidpubkey struct, little-endian
     static byte[] encodePublic(RSAPublicKey k) {
         BigInteger n = k.getModulus();
         int bytes = (n.bitLength() + 7) / 8;
