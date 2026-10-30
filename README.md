@@ -21,7 +21,7 @@ Pure Java + XML, built with AIDE / Apktool M (no Gradle). Package: `com.MiniOdin
 
 ## Safety / status
 - Critical partitions (preloader, nvram, persist, ...) are refused.
-- The write protocol and the ADB reboot are experimental: test on a spare device first. Use at your own risk.
+- The write protocol and the ADB reboot are experimental: test on a spare device first.
 
 ## Build
 Open in AIDE (or any tool that handles `AndroidManifest.xml` + `src/` + `res/` + `libs/`). minSdk 21, targetSdk 28. Put `lz4-java-1.12.0.jar` in `libs/` (see `libs/LISEZMOI.txt`); it is required for `.lz4` files.
